@@ -23,7 +23,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
           AI 智能保研定位系统
         </h2>
         <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-          基于高顿教育 15 年数据沉淀，结合 DeepSeek 大模型算法，为您生成<span className="text-gd-primary font-bold">商业级</span>保研规划报告。
+          基于高顿教育 19 年数据沉淀，结合 DeepSeek 大模型算法，为您生成<span className="text-gd-primary font-bold">商业级</span>保研规划报告。
         </p>
       </div>
 
