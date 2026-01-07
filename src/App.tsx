@@ -8,12 +8,12 @@ import { generateReport } from './services/deepseekService';
 import { UserFormData, ReportData } from './types';
 import schoolsData from './data/schools.json';
 
-// 🔥【强制补丁区】在这里写死你想要的数据，优先级最高！
+// 🔥【强制补丁区】
 const FORCE_PATCH: Record<string, string> = {
   "西安工业大学": "4.0%",
   "复旦大学": "36.6%",
   "上海交通大学": "38.0%",
-  // 你可以在这里继续加...
+  "四川大学": "21.5%"
 };
 
 const App: React.FC = () => {
@@ -28,25 +28,21 @@ const App: React.FC = () => {
     setUserData(data);
 
     try {
-      // 1. 先去 JSON 数据库查（可能是错的）
+      // 1. 查库
       const foundSchool = (schoolsData as any[]).find((s: any) => s.name === data.university);
       let realRate = foundSchool ? foundSchool.rate : "暂未收录";
 
-      // 2. 🔥【暴力修正】如果有强制补丁，直接覆盖！
+      // 2. 补丁覆盖
       if (FORCE_PATCH[data.university]) {
         realRate = FORCE_PATCH[data.university];
-        console.log(`⚡️ 触发强制修正: ${data.university} -> ${realRate}`);
-      } else {
-        console.log(`普通查询: ${data.university} -> ${realRate}`);
+        console.log(`⚡️ [v3.0] 触发强制修正: ${data.university} -> ${realRate}`);
       }
 
-      // 3. 发送数据
       sendToFeishu(data);
       const report = await generateReport(data, realRate);
       setReportData(report);
     } catch (err) {
       setError("系统繁忙，请稍后重试。");
-      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -58,14 +54,15 @@ const App: React.FC = () => {
         <div className="container mx-auto px-4">
           {!reportData ? (
             <>
-              {error && (
-                <div className="max-w-3xl mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 shadow-sm">
-                  <span className="block sm:inline">{error}</span>
-                </div>
-              )}
+              {error && <div className="text-red-500 text-center mb-4">{error}</div>}
               <InputForm onSubmit={handleFormSubmit} isLoading={isLoading} />
-              <div className="max-w-5xl mx-auto pb-20 text-center text-gray-400 text-sm">
-                <p>高顿去保研 · 智能定位系统</p>
+              
+              {/* 👇 这是一个非常显眼的“防伪水印”，用来验证部署是否成功 */}
+              <div className="max-w-5xl mx-auto pb-20 text-center mt-10">
+                <p className="text-gray-400 text-sm">高顿去保研 · 智能定位系统</p>
+                <p className="text-red-500 font-bold text-xs mt-2 border border-red-200 inline-block px-2 py-1 rounded bg-red-50">
+                  当前版本：v3.0 (防缓存修正版) - 补丁已激活
+                </p>
               </div>
             </>
           ) : (
