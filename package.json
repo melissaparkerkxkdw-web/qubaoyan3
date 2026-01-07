@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": ""build": "node scripts/build-data.cjs && tsc && vite build",",
+    "build": "node scripts/build-data.cjs && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
