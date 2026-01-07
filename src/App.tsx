@@ -6,6 +6,7 @@ import ReportView from './components/ReportView';
 import { sendToFeishu } from './services/feishuService';
 import { generateReport } from './services/deepseekService';
 import { UserFormData, ReportData } from './types';
+import schoolsData from './data/schools.json'; // 引入本地数据库
 
 const App: React.FC = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -19,8 +20,17 @@ const App: React.FC = () => {
     setUserData(data);
 
     try {
+      // 1. 在本地数据库中查找学校数据
+      const foundSchool = (schoolsData as any[]).find((s: any) => s.name === data.university);
+      const realRate = foundSchool ? foundSchool.rate : "暂未收录";
+
+      console.log(`查找到 ${data.university} 的保研率: ${realRate}`);
+
+      // 2. 将数据发送到飞书
       sendToFeishu(data);
-      const report = await generateReport(data);
+
+      // 3. 将真实保研率传递给 AI
+      const report = await generateReport(data, realRate);
       setReportData(report);
     } catch (err) {
       setError("系统繁忙或网络异常，请稍后重试。或直接联系客服人工咨询。");

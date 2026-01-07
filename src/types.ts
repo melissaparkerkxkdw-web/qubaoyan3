@@ -82,6 +82,6 @@ export interface ReportData {
 
 export const CONSTANTS = {
   FEISHU_WEBHOOK: "https://open.feishu.cn/open-apis/bot/v2/hook/25faa1d2-76d3-4f88-8277-a5a625b6f789",
-  DEEPSEEK_API_KEY: "sk-f2335a96cee0449386e3822542892783",
+  DEEPSEEK_API_KEY: import.meta.env.VITE_DEEPSEEK_API_KEY || "", 
   DEEPSEEK_API_URL: "https://api.deepseek.com/chat/completions"
 };

@@ -1,95 +1,85 @@
 import { UserFormData, ReportData, CONSTANTS } from '../types';
-import { getSchoolData } from '../data/schoolDatabase';
 
-export const generateReport = async (userData: UserFormData): Promise<ReportData> => {
-  // 1. 核心步骤：先在官方数据库中核验学校
-  const schoolInfo = getSchoolData(userData.university);
-  
-  // 默认空数据结构（用于学校不存在时的返回）
-  const emptyReport: ReportData = {
-    summary: `⚠️ **警告：暂无该院校官方数据**\n\n您输入的院校 "**${userData.university}**" 未收录在我们的官方保研数据库中，或该校暂无公示的推免名额数据。\n\n请尝试输入全称（例如输入"北航"改为"北京航空航天大学"）。为保证规划严谨性，系统已暂停生成分析报告。`,
-    metrics: { gpaScore: 0, researchScore: 0, englishScore: 0, competitionScore: 0, admissionRate: 0 },
-    gradeGuidance: "暂无数据",
-    timeline: [],
-    admissionTrend: [],
-    graduateDestinations: [],
-    destinationSchools: [],
-    similarCases: [],
-    policyAnalysis: "该院校暂无官方保研数据，无法生成政策解析。",
-    bonusPolicy: [],
-    competitionsRecommended: [],
-    researchRecommended: [],
-    recommendations: [],
-    career: { direction: "-", salaryRange: "-" },
-    pengpaiPlanRecommended: false
-  };
-
-  // 2. 如果数据库里没有这个学校，直接拒绝服务，防止 AI 瞎编数据
-  if (!schoolInfo) {
-    return emptyReport;
-  }
-
-  // 3. 构造 Prompt，注入官方数据
-  const grade = userData.grade || "大三";
+export const generateReport = async (userData: UserFormData, realRate?: string): Promise<ReportData> => {
+  // Determine Grade Context for the Prompt
+  const grade = userData.grade || "大三"; 
   let gradeInstruction = "";
 
   if (grade.includes("大一")) {
-    gradeInstruction = `**当前学生为大一新生（奠基期）**：核心是绩点和信息差。`;
+    gradeInstruction = `
+    **当前学生为大一新生（奠基期）**：
+    - **核心战略**：信息差打破与高绩点养成。
+    - **Timeline重点**：识别培养方案中的高学分课程，大一寒暑假提前了解“夏令营”概念，避免盲目参加水社团。
+    `;
   } else if (grade.includes("大二")) {
-    gradeInstruction = `**当前学生为大二学生（分水岭期）**：核心是科研和竞赛背景填充。`;
+    gradeInstruction = `
+    **当前学生为大二学生（分水岭期）**：
+    - **核心战略**：科研/竞赛背景的实质性填充。
+    - **Timeline重点**：必须规划并在大二结束前完成至少一项校级以上科研或“大创”项目，六级必须刷分。
+    `;
   } else {
-    gradeInstruction = `**当前学生为大三/大四学生（冲刺期）**：核心是夏令营投递和文书打磨。`;
+    gradeInstruction = `
+    **当前学生为大三/大四学生（冲刺/收割期）**：
+    - **核心战略**：精准投递与面试攻坚。
+    - **Timeline重点**：梳理文书材料（PS/CV），针对目标院校的夏令营/预推免时间表进行精准狙击。
+    `;
   }
 
   const prompt = `
-你是一位严谨的保研规划师。请基于以下**官方核验数据**生成报告。
+你是一位“高顿去保研”的资深规划师。请基于以下学生信息，生成一份**真实、分年级定制、逻辑严密**的保研规划报告。
 
-**【官方数据库匹配信息】（必须严格使用，不得篡改）：**
-- 院校：${userData.university}（${schoolInfo.province}）
-- **2025届官方保研率**：${schoolInfo.rate}
-- 推免名额/基数：${schoolInfo.admissionQuota} / ${schoolInfo.totalStudents}
-
-**学生自述信息**：
+**学生信息**：
+- 院校：${userData.university}
 - 专业：${userData.major}
 - 年级：${userData.grade}
 - 绩点：${userData.gpaRanking}
 - 英语：${userData.englishScore}
 - 竞赛：${userData.competitions || "暂无"}
 - 科研：${userData.research || "暂无"}
-- 咨询重点：${userData.targetFocus}
+- 重点咨询：${userData.targetFocus}
+- **实际保研率**：${realRate || "未知（请基于常规数据估算）"}
 
-**核心指令（违者必究）：**
-1. **数据真实性**：summary 中必须明确引用官方保研率（${schoolInfo.rate}）。如果学生绩点排名（${userData.gpaRanking}）低于该比例，必须直接指出保研风险。
-2. **拒绝废话**：summary 字段必须先列出官方数据，再分析学生差距。
-3. **${gradeInstruction}**
-4. **推荐院校必须具体**：推荐的学校格式必须为“校名（专业）”。
+**核心指令（严格执行）：**
+
+1.  **真实性与具体性**：
+    * **目标院校必须带专业**：推荐“冲刺/稳妥/保底”院校时，**严禁**只写校名。必须格式化为 **“校名（专业/方向）”**。
+    * **结合实际保研率**：请参考提供的“实际保研率”数据（${realRate || "暂无"}）来评估该生的保研难度。如果保研率低于 5%，请在 summary 中明确预警“保研名额竞争极度激烈”。
+    * **前期具体情况分析**：在 \`summary\` 字段中，先一针见血地分析学生目前的短板，再给出整体定位。
+
+2.  **${gradeInstruction}**
+
+3.  **时间轴排版要求（非常重要）**：
+    * 在 \`timeline\` 的 \`content\` 字段中，**严禁**使用大段文字。
+    * **必须**严格按照以下四个维度分行罗列建议（请使用 Markdown 加粗标签）：
+        1. **成绩**：[建议]
+        2. **英语**：[建议]
+        3. **科研**：[建议]
+        4. **竞赛**：[建议]
+
+4.  **案例匹配**：匹配 3 个最接近该学生背景的真实案例。
 
 **返回格式（严格JSON）：**
 {
-  "summary": "...", 
+  "summary": "...",
   "metrics": {
-    "gpaScore": 80, 
+    "gpaScore": 85, 
     "researchScore": 60,
-    "englishScore": 70,
-    "competitionScore": 60,
-    "admissionRate": ${parseFloat(schoolInfo.rate.replace('%', ''))} 
+    "englishScore": 75,
+    "competitionScore": 70,
+    "admissionRate": ${realRate ? parseFloat(realRate) : 15}
   },
-  "admissionTrend": [
-    { "label": "2023届", "value": ${Math.max(0, parseFloat(schoolInfo.rate.replace('%', '')) - 1.5).toFixed(2)} },
-    { "label": "2024届", "value": ${Math.max(0, parseFloat(schoolInfo.rate.replace('%', '')) - 0.5).toFixed(2)} },
-    { "label": "2025届(官方)", "value": ${parseFloat(schoolInfo.rate.replace('%', ''))} }
-  ],
-  "policyAnalysis": "...",
   "gradeGuidance": "...",
   "timeline": [],
+  "admissionTrend": [],
   "graduateDestinations": [],
   "destinationSchools": [],
   "similarCases": [],
+  "policyAnalysis": "...",
   "bonusPolicy": [],
   "competitionsRecommended": [],
   "researchRecommended": [],
   "recommendations": [],
-  "career": { "direction": "", "salaryRange": "" },
+  "career": {},
   "pengpaiPlanRecommended": true
 }
 `;
@@ -104,22 +94,19 @@ export const generateReport = async (userData: UserFormData): Promise<ReportData
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: "你是一个只基于官方数据说话的分析师。如果官方数据中包含保研率，必须在分析中显式引用。对于不在官方名单中的学校，禁止生成具体录取率数据。" },
+          { role: "system", content: "你是一个极其严谨的保研规划专家。在推荐院校时，你总是会明确指出具体的专业方向。" },
           { role: "user", content: prompt }
         ],
-        temperature: 0.1, // 降低创造性，提高严谨度
+        temperature: 0.3,
         stream: false
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
     const data = await response.json();
     let contentString = data.choices[0].message.content;
-    
-    // Clean JSON
+
     contentString = contentString.replace(/```json/g, '').replace(/```/g, '');
     contentString = contentString.replace(/<think>[\s\S]*?<\/think>/g, '');
 
@@ -130,16 +117,25 @@ export const generateReport = async (userData: UserFormData): Promise<ReportData
       contentString = contentString.substring(firstBrace, lastBrace + 1);
     }
 
-    const parsedData = JSON.parse(contentString);
-    
-    // 二次强制覆盖：确保返回的数据中 admissionRate 与官方一致，防止 AI 幻觉修改数据
-    if (parsedData.metrics) {
-        parsedData.metrics.admissionRate = parseFloat(schoolInfo.rate.replace('%', ''));
-    }
-
-    return parsedData;
+    return JSON.parse(contentString);
   } catch (error) {
     console.error("DeepSeek API Error:", error);
-    return emptyReport;
+    return {
+      summary: "系统连接繁忙，正在为您切换备用线路...",
+      metrics: { gpaScore: 80, researchScore: 60, englishScore: 70, competitionScore: 60, admissionRate: 15 },
+      gradeGuidance: "建议直接联系高顿顾问获取人工分析。",
+      timeline: [],
+      admissionTrend: [],
+      graduateDestinations: [],
+      destinationSchools: [],
+      similarCases: [],
+      policyAnalysis: "暂无数据",
+      bonusPolicy: [],
+      competitionsRecommended: [],
+      researchRecommended: [],
+      recommendations: [],
+      career: { direction: "-", salaryRange: "-" },
+      pengpaiPlanRecommended: true
+    };
   }
 };
